@@ -1,0 +1,423 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Audiation Lab</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Inter:wght@400;500;600&display=swap">
+<style>
+/* Layout: one-screen practice stage — prompt card center, feedback below, stats footer. Dark-first (night practice room), deliberate single theme. */
+:root{
+  --bg:#14121a; --panel:#1e1b27; --panel2:#262233; --fg:#f2eef9; --muted:#9a93ad;
+  --accent:#e8b84b; --good:#67d98b; --warn:#e8884b; --bad:#e05c6e;
+  --ring:#3a3450; --display:'Fraunces',Georgia,serif; --body:'Inter',-apple-system,Helvetica,sans-serif;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--body);font-size:16px;
+  display:flex;flex-direction:column;padding-block:env(safe-area-inset-top,0px) env(safe-area-inset-bottom,0px)}
+header{padding:14px 20px 6px;display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
+h1{font-family:var(--display);font-weight:700;font-size:1.5rem;margin:0;letter-spacing:.3px}
+h1 .dot{color:var(--accent)}
+.tag{color:var(--muted);font-size:.8rem;letter-spacing:.06em;text-transform:uppercase}
+main{flex:1;display:flex;flex-direction:column;gap:14px;padding:8px 16px 16px;max-width:560px;width:100%;margin:0 auto;min-height:0}
+
+.rowbtns{display:flex;gap:8px;flex-wrap:wrap}
+.rowbtns button{flex:1;min-width:104px;background:var(--panel);border:1px solid var(--ring);color:var(--muted);
+  border-radius:10px;padding:10px 8px;font-family:var(--body);font-size:.85rem;font-weight:600;cursor:pointer}
+.rowbtns button.on{background:var(--panel2);color:var(--fg);border-color:var(--accent)}
+button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+button:disabled{opacity:.4;cursor:default}
+
+.stage{background:var(--panel);border:1px solid var(--ring);border-radius:16px;padding:22px 18px;text-align:center;
+  display:flex;flex-direction:column;gap:10px;align-items:center;justify-content:center;min-height:230px;position:relative}
+.rec{position:absolute;top:12px;right:14px;color:var(--bad);font-size:.75rem;letter-spacing:.1em;display:none;align-items:center;gap:6px}
+.rec::before{content:'';width:9px;height:9px;border-radius:50%;background:var(--bad);display:inline-block;animation:blink 1.2s infinite}
+@keyframes blink{50%{opacity:.25}}
+.progress{position:absolute;top:12px;left:14px;color:var(--muted);font-size:.78rem;letter-spacing:.08em}
+.phase{font-size:.78rem;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.bigline{font-family:var(--display);font-size:2rem;font-weight:600;min-height:2.6rem;text-wrap:balance}
+.subline{color:var(--muted);font-size:.95rem;min-height:1.3rem}
+.result{font-family:var(--display);font-size:2.6rem;font-weight:700;min-height:3rem}
+.result.good{color:var(--good)} .result.ok{color:var(--accent)} .result.near{color:var(--warn)} .result.miss{color:var(--bad)}
+.gauge{width:84%;max-width:320px;height:10px;background:var(--panel2);border-radius:5px;position:relative;overflow:hidden}
+.gauge .center{position:absolute;left:50%;top:0;width:2px;height:100%;background:var(--muted)}
+.gauge .pin{position:absolute;top:0;width:8px;height:100%;border-radius:4px;background:var(--accent);left:50%;transform:translateX(-50%);transition:left .25s}
+.gaugelabels{width:84%;max-width:320px;display:flex;justify-content:space-between;color:var(--muted);font-size:.7rem}
+
+.controls{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+.go{background:var(--accent);color:#241c06;border:none;border-radius:12px;padding:14px 30px;
+  font-family:var(--body);font-size:1.05rem;font-weight:600;cursor:pointer}
+.test{background:none;border:1px solid var(--accent);color:var(--accent);border-radius:12px;padding:14px 22px;font-size:1rem;font-weight:600;cursor:pointer}
+.ghost{background:none;border:1px solid var(--ring);color:var(--muted);border-radius:12px;padding:14px 18px;font-size:.95rem;cursor:pointer}
+
+.settings{display:flex;gap:14px;justify-content:center;flex-wrap:wrap;color:var(--muted);font-size:.85rem;align-items:center}
+.settings label{display:flex;gap:6px;align-items:center}
+select{background:var(--panel);color:var(--fg);border:1px solid var(--ring);border-radius:8px;padding:5px 8px;font-family:var(--body)}
+
+.stats{display:flex;gap:10px;flex-wrap:wrap}
+.stat{flex:1;min-width:100px;background:var(--panel);border:1px solid var(--ring);border-radius:12px;padding:10px 12px}
+.stat .v{font-family:var(--display);font-size:1.4rem;font-weight:700;font-variant-numeric:tabular-nums}
+.stat .k{color:var(--muted);font-size:.72rem;letter-spacing:.08em;text-transform:uppercase}
+.hist{display:flex;gap:3px;align-items:flex-end;height:44px;background:var(--panel);border:1px solid var(--ring);border-radius:12px;padding:8px 10px}
+.hist span{flex:1;border-radius:2px;min-height:4px;background:var(--muted)}
+.hist span.good{background:var(--good)} .hist span.ok{background:var(--accent)} .hist span.near{background:var(--warn)} .hist span.miss{background:var(--bad)}
+.note{color:var(--muted);font-size:.8rem;text-align:center;margin:0}
+
+.report{background:var(--panel);border:1px solid var(--accent);border-radius:16px;padding:16px;display:none;flex-direction:column;gap:10px}
+.report h2{font-family:var(--display);margin:0;font-size:1.2rem}
+.report table{width:100%;border-collapse:collapse;font-size:.85rem;font-variant-numeric:tabular-nums}
+.report td,.report th{padding:4px 6px;text-align:left;border-bottom:1px solid var(--ring)}
+.report th{color:var(--muted);font-weight:500;font-size:.72rem;text-transform:uppercase;letter-spacing:.06em}
+.dl{display:flex;gap:10px;flex-wrap:wrap}
+.dl a{background:var(--accent);color:#241c06;border-radius:10px;padding:10px 16px;font-weight:600;text-decoration:none;font-size:.9rem}
+.dl a.sec{background:none;border:1px solid var(--ring);color:var(--fg)}
+@media (prefers-reduced-motion: reduce){ .gauge .pin{transition:none} .rec::before{animation:none} }
+</style>
+</head>
+<body>
+<header>
+  <h1>Audiation Lab<span class="dot">.</span></h1>
+  <span class="tag">hear it first, then sing it</span>
+</header>
+<main>
+  <div class="rowbtns" id="modes">
+    <button data-m="echo" class="on">Echo Note</button>
+    <button data-m="interval">Interval Builder</button>
+    <button data-m="leap">Leap Landing</button>
+  </div>
+
+  <div class="stage">
+    <div class="progress" id="progress"></div>
+    <div class="rec" id="recdot">REC</div>
+    <div class="phase" id="phase">ready</div>
+    <div class="bigline" id="bigline">Warm up in Practice, then take the Test.</div>
+    <div class="subline" id="subline">The silence between hearing and singing is the exercise.</div>
+    <div class="result" id="result"></div>
+    <div class="gauge"><div class="center"></div><div class="pin" id="pin"></div></div>
+    <div class="gaugelabels"><span>flat −50¢</span><span>0</span><span>sharp +50¢</span></div>
+  </div>
+
+  <div class="controls">
+    <button class="go" id="go">Practice</button>
+    <button class="test" id="testbtn">Test (10) ⏺</button>
+    <button class="ghost" id="replay" disabled>Replay</button>
+  </div>
+
+  <div class="settings">
+    <label>Range <select id="range">
+      <option value="55,67">Low (G3–G4)</option>
+      <option value="57,72" selected>Sophie (A3–C5)</option>
+      <option value="62,76">High (D4–E5)</option>
+    </select></label>
+    <label>Think-gap <select id="gap">
+      <option value="600">0.6s</option>
+      <option value="1200" selected>1.2s</option>
+      <option value="2000">2s</option>
+    </select></label>
+  </div>
+
+  <div class="report" id="report">
+    <h2 id="repTitle">Test complete</h2>
+    <table id="repTable"></table>
+    <div class="dl" id="dl"></div>
+    <p class="note">Save both files into the Audiation Lab folder — the recording + report let Claude verify the scores with the full analysis.</p>
+  </div>
+
+  <div class="stats">
+    <div class="stat"><div class="v" id="sToday">0</div><div class="k">reps today</div></div>
+    <div class="stat"><div class="v" id="sAvg">–</div><div class="k">avg off (¢)</div></div>
+    <div class="stat"><div class="v" id="sIn15">–</div><div class="k">within ±15¢</div></div>
+    <div class="stat"><div class="v" id="sStreak">0</div><div class="k">best streak</div></div>
+  </div>
+  <div class="hist" id="hist"></div>
+  <p class="note" id="micnote">Tap Practice or Test — the browser asks for the microphone once.</p>
+</main>
+
+<script>
+(()=>{
+const $=id=>document.getElementById(id);
+const NOTES=['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
+const nname=m=>NOTES[m%12]+(Math.floor(m/12)-1);
+const INTERVALS=[[3,'minor 3rd'],[4,'major 3rd'],[5,'perfect 4th'],[7,'perfect 5th'],[12,'octave']];
+let mode='echo', busy=false, lastPrompt=null, inTest=false;
+let ac=null, analyser=null, micOK=false, buf=null, micStream=null;
+let streak=0;
+
+const store={
+  load(){ try{return JSON.parse(localStorage.getItem('audlab')||'[]')}catch(e){return[]} },
+  save(a){ try{localStorage.setItem('audlab',JSON.stringify(a.slice(-500)))}catch(e){} }
+};
+let log=store.load();
+let bestStreak=0; try{bestStreak=+localStorage.getItem('audlab_streak')||0}catch(e){}
+
+async function ensureAudio(){
+  if(!ac){ ac=new (window.AudioContext||window.webkitAudioContext)(); }
+  if(ac.state==='suspended') await ac.resume();
+  if(!micOK){
+    if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){
+      $('micnote').textContent='This browser blocks the mic for files opened directly. Use the GitHub link instead (works everywhere).';
+      setPhase('ready','Mic not available here.','Open the app from its web link.');
+      throw new Error('no mediaDevices');
+    }
+    try{
+      micStream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:false,noiseSuppression:false,autoGainControl:false}});
+      const src=ac.createMediaStreamSource(micStream);
+      analyser=ac.createAnalyser(); analyser.fftSize=2048;
+      src.connect(analyser); buf=new Float32Array(analyser.fftSize);
+      micOK=true; $('micnote').textContent='Mic on. Sing short and confident — staccato "pah".';
+    }catch(e){
+      $('micnote').textContent='Microphone blocked. If the mic will not start from a double-clicked file, open this page in Safari.';
+      throw e;
+    }
+  }
+}
+function tone(midi,when,dur=0.55,gain=0.22){
+  const f=440*Math.pow(2,(midi-69)/12);
+  const t=ac.currentTime+when;
+  const o=ac.createOscillator(), o2=ac.createOscillator(), g=ac.createGain();
+  o.type='triangle'; o.frequency.value=f;
+  o2.type='sine'; o2.frequency.value=f*2;
+  const g2=ac.createGain(); g2.gain.value=0.12;
+  o.connect(g); o2.connect(g2); g2.connect(g); g.connect(ac.destination);
+  g.gain.setValueAtTime(0,t);
+  g.gain.linearRampToValueAtTime(gain,t+0.015);
+  g.gain.exponentialRampToValueAtTime(0.0001,t+dur);
+  o.start(t); o2.start(t); o.stop(t+dur+0.05); o2.stop(t+dur+0.05);
+}
+function framePitch(){
+  analyser.getFloatTimeDomainData(buf);
+  let rms=0; for(let i=0;i<buf.length;i++) rms+=buf[i]*buf[i];
+  rms=Math.sqrt(rms/buf.length);
+  if(rms<0.015) return null;
+  const sr=ac.sampleRate, lo=Math.floor(sr/1100), hi=Math.floor(sr/140);
+  let best=-1,bestK=-1, e0=0;
+  for(let i=0;i<buf.length;i++) e0+=buf[i]*buf[i];
+  for(let k=lo;k<=hi&&k<buf.length;k++){
+    let s=0;
+    for(let i=0;i<buf.length-k;i++) s+=buf[i]*buf[i+k];
+    const v=s/e0;
+    if(v>best){best=v;bestK=k;}
+  }
+  if(best<0.5) return null;
+  return sr/bestK;
+}
+
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+function pickMidi(){
+  const [a,b]=$('range').value.split(',').map(Number);
+  let m;
+  do{ m=a+Math.floor(Math.random()*(b-a+1)); }while(lastPrompt&&m===lastPrompt.target);
+  return m;
+}
+function setPhase(p,big,sub){ $('phase').textContent=p; $('bigline').textContent=big; $('subline').textContent=sub||''; }
+
+function buildPrompt(){
+  const [lo,hi]=$('range').value.split(',').map(Number);
+  if(mode==='echo'){
+    const m=pickMidi();
+    return {play:[m], target:m, say:'Echo this note', hint:'hear it, then sing it', label:nname(m)};
+  }
+  if(mode==='interval'){
+    const iv=INTERVALS[Math.floor(Math.random()*INTERVALS.length)];
+    let root=lo+Math.floor(Math.random()*Math.max(1,(hi-lo-iv[0])));
+    return {play:[root], target:root+iv[0], say:'Sing a '+iv[1]+' ABOVE', hint:'root is '+nname(root)+' — build it in your head first', label:iv[1]+' from '+nname(root)};
+  }
+  const up=Math.random()<0.6;
+  let root=up? lo+Math.floor(Math.random()*Math.max(1,hi-lo-12)) : lo+12+Math.floor(Math.random()*Math.max(1,hi-lo-12));
+  return {play:[root], target:root+(up?12:-12), say:'Land the octave '+(up?'UP':'DOWN'), hint:'staccato — no sliding into it', label:'octave '+(up?'up':'down')+' from '+nname(root)};
+}
+
+async function listenAttack(ms){
+  const t0=performance.now();
+  let started=null, hzs=[];
+  while(performance.now()-t0<ms){
+    const f=framePitch();
+    const now=performance.now();
+    if(f){
+      if(started===null) started=now;
+      hzs.push(f);
+      if(now-started>170) break;
+    } else if(started!==null && now-started>120){
+      break;
+    }
+    await sleep(22);
+  }
+  return hzs;
+}
+
+// one rep: play prompt, think-gap, listen; returns {diff} or null if no voice
+async function doRep(p){
+  setPhase('listen', p.say, p.hint);
+  p.play.forEach((m,i)=>tone(m,0.05+i*0.6));
+  await sleep(700*p.play.length);
+  setPhase('think','…','hear the target in your head — don’t sing yet');
+  await sleep(+$('gap').value);
+  setPhase('sing','NOW','short + confident');
+  const f=await listenAttack(2600);
+  if(!f.length) return null;
+  f.sort((a,b)=>a-b);
+  const hz=f[Math.floor(f.length/2)];
+  let m=69+12*Math.log2(hz/440);
+  let diff=(m-p.target)*100;
+  while(diff>650) diff-=1200;
+  while(diff<-650) diff+=1200;
+  return Math.round(diff);
+}
+
+function grade(d){
+  const ad=Math.abs(d);
+  if(ad<=10) return ['good','bullseye'];
+  if(ad<=20) return ['ok','close'];
+  if(ad<=35) return ['near','almost'];
+  return ['miss', d<0?'under it':'over it'];
+}
+function showResult(p,d){
+  const [cls,msg]=grade(d);
+  if(cls==='good'||cls==='ok'){streak++;} else {streak=0;}
+  if(streak>bestStreak){bestStreak=streak; try{localStorage.setItem('audlab_streak',bestStreak)}catch(e){}}
+  $('result').textContent=(d>0?'+':'')+d+'¢ · '+msg;
+  $('result').className='result '+cls;
+  const pct=Math.max(-50,Math.min(50,d));
+  $('pin').style.left='calc(50% + '+pct+'%)';
+  $('pin').style.background=getComputedStyle(document.documentElement).getPropertyValue(cls==='good'?'--good':cls==='ok'?'--accent':cls==='near'?'--warn':'--bad');
+  setPhase('ready', (msg==='bullseye'?'🎯 ':'')+nname(p.target), d<-10?'started under — aim at the ceiling of the note':(d>20?'pressed sharp — lighter, less push':'again'));
+  log.push({t:Date.now(),m:mode,c:d}); store.save(log); renderStats();
+}
+
+async function practice(){
+  if(busy) return; busy=true; setButtons(false); $('result').textContent=''; $('result').className='result'; $('report').style.display='none';
+  try{ await ensureAudio(); }catch(e){ busy=false; setButtons(true); return; }
+  const p=buildPrompt(); lastPrompt=p;
+  const d=await doRep(p);
+  busy=false; setButtons(true); $('replay').disabled=false;
+  if(d===null){ setPhase('ready','No voice detected.','Closer to the mic, or a touch louder.'); return; }
+  showResult(p,d);
+}
+
+// ---------- TEST: 10 prompts, recorded ----------
+const TESTN=10;
+async function runTest(){
+  if(busy) return; busy=true; inTest=true; setButtons(false); $('report').style.display='none';
+  $('result').textContent=''; $('result').className='result';
+  try{ await ensureAudio(); }catch(e){ busy=false; inTest=false; setButtons(true); return; }
+
+  let recorder=null, chunks=[], mimeType='';
+  try{
+    for(const mt of ['audio/mp4','audio/webm;codecs=opus','audio/webm']){
+      if(window.MediaRecorder && MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(mt)){ mimeType=mt; break; }
+    }
+    recorder=new MediaRecorder(micStream, mimeType?{mimeType}:undefined);
+    recorder.ondataavailable=e=>{ if(e.data.size) chunks.push(e.data); };
+    recorder.start();
+    $('recdot').style.display='flex';
+  }catch(e){ recorder=null; }
+
+  const t0=performance.now();
+  const rows=[];
+  for(let i=1;i<=TESTN;i++){
+    $('progress').textContent=i+' / '+TESTN;
+    const p=buildPrompt(); lastPrompt=p;
+    const tOff=(performance.now()-t0)/1000;
+    const d=await doRep(p);
+    if(d===null){
+      rows.push({i, label:p.label, target:nname(p.target), t:tOff.toFixed(1), cents:null});
+      setPhase('ready','No voice detected','moving on…');
+    } else {
+      showResult(p,d);
+      rows.push({i, label:p.label, target:nname(p.target), t:tOff.toFixed(1), cents:d});
+    }
+    await sleep(900);
+  }
+  $('progress').textContent=''; $('recdot').style.display='none';
+
+  let audioURL=null, ext='webm';
+  if(recorder){
+    await new Promise(res=>{ recorder.onstop=res; recorder.stop(); });
+    if(chunks.length){
+      const blob=new Blob(chunks,{type:mimeType||'audio/webm'});
+      ext=(mimeType.indexOf('mp4')>=0)?'m4a':'webm';
+      audioURL=URL.createObjectURL(blob);
+    }
+  }
+  finishTest(rows,audioURL,ext);
+  busy=false; inTest=false; setButtons(true);
+}
+
+function finishTest(rows,audioURL,ext){
+  const scored=rows.filter(r=>r.cents!==null);
+  const abs=scored.map(r=>Math.abs(r.cents));
+  const avg=abs.length?Math.round(abs.reduce((a,b)=>a+b,0)/abs.length):0;
+  const in15=abs.length?Math.round(100*abs.filter(a=>a<=15).length/abs.length):0;
+  $('repTitle').textContent='Test: '+in15+'% within ±15¢ · avg '+avg+'¢ off';
+  let html='<tr><th>#</th><th>prompt</th><th>target</th><th>at (s)</th><th>result</th></tr>';
+  rows.forEach(r=>{
+    const v = r.cents===null ? '—' : (r.cents>0?'+':'')+r.cents+'¢';
+    html+='<tr><td>'+r.i+'</td><td>'+r.label+'</td><td>'+r.target+'</td><td>'+r.t+'</td><td>'+v+'</td></tr>';
+  });
+  $('repTable').innerHTML=html;
+
+  const stamp=new Date().toISOString().slice(0,16).replace('T','_').replace(':','-');
+  const dl=$('dl'); dl.innerHTML='';
+  if(audioURL){
+    const a=document.createElement('a');
+    a.href=audioURL; a.download='AudiationTest_'+stamp+'.'+ext;
+    a.textContent='⬇ Save recording';
+    dl.appendChild(a);
+  } else {
+    const s=document.createElement('span'); s.className='note'; s.textContent='(recording unavailable in this browser)'; dl.appendChild(s);
+  }
+  const rep={date:new Date().toISOString(), mode, range:$('range').value, thinkGapMs:+$('gap').value,
+             summary:{avgAbsCents:avg,pctWithin15:in15,scored:scored.length,of:rows.length}, prompts:rows};
+  const b=new Blob([JSON.stringify(rep,null,2)],{type:'application/json'});
+  const a2=document.createElement('a');
+  a2.href=URL.createObjectURL(b); a2.download='AudiationTest_'+stamp+'.json'; a2.className='sec';
+  a2.textContent='⬇ Save report';
+  dl.appendChild(a2);
+  $('report').style.display='flex';
+  setPhase('ready','Test complete.','Save both files to the Audiation Lab folder for Claude.');
+}
+
+function setButtons(on){ $('go').disabled=!on; $('testbtn').disabled=!on; $('replay').disabled=!on||!lastPrompt;
+  [...$('modes').children].forEach(b=>b.disabled=!on); }
+
+function renderStats(){
+  const today=new Date().setHours(0,0,0,0);
+  const t=log.filter(x=>x.t>=today);
+  $('sToday').textContent=t.length;
+  if(t.length){
+    const abs=t.map(x=>Math.abs(x.c));
+    $('sAvg').textContent=Math.round(abs.reduce((a,b)=>a+b,0)/abs.length);
+    $('sIn15').textContent=Math.round(100*abs.filter(a=>a<=15).length/abs.length)+'%';
+  } else { $('sAvg').textContent='–'; $('sIn15').textContent='–'; }
+  $('sStreak').textContent=bestStreak;
+  const h=$('hist'); h.innerHTML='';
+  log.slice(-24).forEach(x=>{
+    const s=document.createElement('span');
+    const ad=Math.abs(x.c);
+    s.className= ad<=10?'good':ad<=20?'ok':ad<=35?'near':'miss';
+    s.style.height=Math.max(8,44-Math.min(44,ad))+'%';
+    s.title=(x.c>0?'+':'')+x.c+'¢';
+    h.appendChild(s);
+  });
+}
+
+$('go').addEventListener('click',practice);
+$('testbtn').addEventListener('click',runTest);
+$('replay').addEventListener('click',async()=>{
+  if(!lastPrompt||busy) return;
+  await ensureAudio();
+  lastPrompt.play.forEach((m,i)=>tone(m,0.05+i*0.6));
+});
+$('modes').addEventListener('click',e=>{
+  const b=e.target.closest('button'); if(!b||busy) return;
+  mode=b.dataset.m;
+  [...$('modes').children].forEach(x=>x.classList.toggle('on',x===b));
+  setPhase('ready', b.textContent, mode==='echo'?'hear it, hold it in your head, land it':mode==='interval'?'you only hear the root — build the target silently':'land the octave cold, staccato');
+});
+renderStats();
+})();
+</script>
+</body>
+</html>
