@@ -116,6 +116,11 @@ select{background:var(--panel);color:var(--fg);border:1px solid var(--ring);bord
       <option value="1200" selected>1.2s</option>
       <option value="2000">2s</option>
     </select></label>
+    <label>Note length <select id="notelen">
+      <option value="1200">1.2s</option>
+      <option value="1800" selected>1.8s</option>
+      <option value="3000">3s</option>
+    </select></label>
   </div>
 
   <div class="report" id="report">
@@ -173,18 +178,33 @@ async function ensureAudio(){
     }
   }
 }
-function tone(midi,when,dur=0.55,gain=0.22){
+function noteDur(){ return +($('notelen')?$('notelen').value:1800)/1000; }
+function tone(midi,when,dur,gain=0.26){
+  if(dur===undefined) dur=noteDur();
   const f=440*Math.pow(2,(midi-69)/12);
   const t=ac.currentTime+when;
-  const o=ac.createOscillator(), o2=ac.createOscillator(), g=ac.createGain();
+  const o=ac.createOscillator(), o2=ac.createOscillator(), o3=ac.createOscillator(), g=ac.createGain();
   o.type='triangle'; o.frequency.value=f;
   o2.type='sine'; o2.frequency.value=f*2;
-  const g2=ac.createGain(); g2.gain.value=0.12;
-  o.connect(g); o2.connect(g2); g2.connect(g); g.connect(ac.destination);
+  o3.type='sine'; o3.frequency.value=f*3;
+  const g2=ac.createGain(); g2.gain.value=0.10;
+  const g3=ac.createGain(); g3.gain.value=0.045;
+  const vib=ac.createOscillator(), vibG=ac.createGain();
+  vib.frequency.value=5; vibG.gain.value=f*0.004;      // gentle vibrato so it sounds voiced, not electronic
+  vib.connect(vibG); vibG.connect(o.frequency);
+  o.connect(g); o2.connect(g2); g2.connect(g); o3.connect(g3); g3.connect(g); g.connect(ac.destination);
+  // organ-like: attack, long sustain, gentle release — easy to hold in the ear
   g.gain.setValueAtTime(0,t);
-  g.gain.linearRampToValueAtTime(gain,t+0.015);
-  g.gain.exponentialRampToValueAtTime(0.0001,t+dur);
-  o.start(t); o2.start(t); o.stop(t+dur+0.05); o2.stop(t+dur+0.05);
+  g.gain.linearRampToValueAtTime(gain,t+0.03);
+  g.gain.setValueAtTime(gain,t+dur-0.25);
+  g.gain.linearRampToValueAtTime(0.0001,t+dur);
+  o.start(t); o2.start(t); o3.start(t); vib.start(t);
+  o.stop(t+dur+0.05); o2.stop(t+dur+0.05); o3.stop(t+dur+0.05); vib.stop(t+dur+0.05);
+}
+function playPrompt(p){
+  const d=noteDur();
+  p.play.forEach((m,i)=>tone(m,0.05+i*(d+0.2)));
+  return (d+0.25)*p.play.length*1000;
 }
 function framePitch(){
   analyser.getFloatTimeDomainData(buf);
@@ -250,8 +270,7 @@ async function listenAttack(ms){
 // one rep: play prompt, think-gap, listen; returns {diff} or null if no voice
 async function doRep(p){
   setPhase('listen', p.say, p.hint);
-  p.play.forEach((m,i)=>tone(m,0.05+i*0.6));
-  await sleep(700*p.play.length);
+  await sleep(playPrompt(p));
   setPhase('think','…','hear the target in your head — don’t sing yet');
   await sleep(+$('gap').value);
   setPhase('sing','NOW','short + confident');
@@ -408,7 +427,7 @@ $('testbtn').addEventListener('click',runTest);
 $('replay').addEventListener('click',async()=>{
   if(!lastPrompt||busy) return;
   await ensureAudio();
-  lastPrompt.play.forEach((m,i)=>tone(m,0.05+i*0.6));
+  playPrompt(lastPrompt);
 });
 $('modes').addEventListener('click',e=>{
   const b=e.target.closest('button'); if(!b||busy) return;
